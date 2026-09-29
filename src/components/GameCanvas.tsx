@@ -429,8 +429,7 @@ function SahyadriClouds() {
           position={c.pos}
           opacity={c.opacity}
           speed={c.speed}
-          width={c.width}
-          depth={c.depth}
+          bounds={[c.width, 2, c.depth]}
           segments={c.segments}
           color="#f8fafc"
         />
@@ -554,6 +553,9 @@ function Terrain(_props: TerrainProps) {
 
       {/* Organic Mountain Trees */}
       <SahyadriTrees />
+
+      {/* Atmospheric Background Clouds */}
+      <SahyadriClouds />
     </group>
   );
 }
