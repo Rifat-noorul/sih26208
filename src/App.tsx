@@ -4,6 +4,7 @@ import GanimiHUD from './components/GanimiHUD';
 import ComicBriefing from './components/ComicBriefing';
 import GameIntro from './components/GameIntro';
 import ComicIntro from './components/ComicIntro';
+import LoadingScreen from './components/LoadingScreen';
 import { useGameStore } from './store/gameStore';
 import './App.css';
 
@@ -14,6 +15,9 @@ export default function App() {
 
   return (
     <div className={`app-container ${isSpotted && !isSentryNeutralized ? 'spotted-alarm' : ''}`}>
+      {/* Real Historical Tactical Asset Loading Screen */}
+      <LoadingScreen />
+
       {/* Historical Cinematic Entrance Screen */}
       {showIntro && (
         <GameIntro onComplete={() => setShowIntro(false)} />

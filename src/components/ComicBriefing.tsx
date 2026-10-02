@@ -1,16 +1,24 @@
+import { useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { Compass, Flame, Shield, Scroll } from 'lucide-react';
+import { Flame, Shield, Compass, ArrowRight, Target, Mountain, Crosshair } from 'lucide-react';
 
 /**
- * 17th-Century Maratha Tactical Field Dispatch Briefing System (Inked Comic UI)
- * - Basalt Slate (#111417) & Weathered Parchment Scroll (#f4efe2) container
- * - Panel 1: Topographic Route Sketch with elevation contours, red march vectors & Vermilion Rajmudra Seal (12° rotated)
- * - Panel 2: Split Directives: Left Harkara Intel Dispatch (Modi Script style) & Right Tactical Doctrine (Ink Panel)
- * - Cinematic Launch Button: Deep Vermilion (#8b1e1e) & Gold Foil (#d97706) border 'DEPLOY SCOUT TO RIDGE [ ENTER ] ➔'
+ * Historical Tactical Mission Briefing — Sahyadri Field Dispatch 1661 CE
  */
 export default function ComicBriefing() {
   const isBriefingOpen = useGameStore((state) => state.isBriefingOpen);
   const setIsBriefingOpen = useGameStore((state) => state.setIsBriefingOpen);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isBriefingOpen && (e.key === 'Enter' || e.code === 'Enter' || e.code === 'Space')) {
+        e.preventDefault();
+        setIsBriefingOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isBriefingOpen, setIsBriefingOpen]);
 
   if (!isBriefingOpen) return null;
 
@@ -20,94 +28,133 @@ export default function ComicBriefing() {
       <div className="basalt-panel">
         {/* Weathered Parchment Inner Container (#f4efe2) */}
         <div className="parchment-container">
-          {/* Authentic Vermilion Seal Stamp (Rajmudra Circle rotated 12°) */}
+          {/* Authentic Maratha Military Seal Stamp (Rotated 12° stamp, NO OM) */}
           <div className="rajmudra-seal">
             <div className="seal-ring">
               <span className="seal-text-top">प्रतिपच्चंद्रलेखेव</span>
-              <span className="seal-center-symbol">ॐ</span>
-              <span className="seal-text-bot">शाहसूनोः शिवस्यैषा</span>
+              <span className="seal-center-text">शिवस्यैषा मुद्रा</span>
+              <span className="seal-text-bot">वर्धिष्णुर्विश्ववंदिता</span>
             </div>
           </div>
 
-          {/* Dispatch Header */}
+          {/* 1. TOP HEADER */}
           <header className="dispatch-header">
             <div className="dispatch-tag-row">
               <span className="dispatch-badge">
-                <Flame size={14} />
+                <Flame size={13} />
                 <span>SAHYADRI FIELD DISPATCH • 1661 CE</span>
               </span>
               <span className="location-tag">UMBERKHIND PASS</span>
             </div>
-            <h1 className="dispatch-title">AMBUSH THE VANGUARD</h1>
+            <h1 className="dispatch-title">AMBUSH AT UMBERKHIND</h1>
           </header>
 
-          {/* PANEL 1: Topographic Route Sketch (Top) */}
-          <div className="topo-panel">
-            <div className="topo-map-visual">
-              {/* SVG Inked Topographic Contour Curves & Dotted Red March Vectors */}
-              <svg className="topo-svg" viewBox="0 0 600 120" preserveAspectRatio="none">
-                {/* Elevation Contours */}
-                <path d="M0,20 Q150,5 300,30 T600,10" fill="none" stroke="#78350f" strokeWidth="1.5" strokeDasharray="4 2" />
-                <path d="M0,45 Q200,25 400,55 T600,35" fill="none" stroke="#78350f" strokeWidth="1.2" opacity="0.6" />
-                <path d="M0,100 Q180,115 350,95 T600,110" fill="none" stroke="#78350f" strokeWidth="1.5" strokeDasharray="4 2" />
+          {/* 2. MISSION SITUATION */}
+          <section className="briefing-section situation-section">
+            <h3 className="section-label">
+              <Compass size={14} />
+              <span>MISSION SITUATION</span>
+            </h3>
+            <p className="situation-text">
+              The Mughal vanguard is entering the narrow Umberkhind pass. Use the surrounding terrain to your advantage and prepare the ambush.
+            </p>
+          </section>
 
-                {/* High Ridge Contour Labels */}
-                <text x="20" y="25" fill="#78350f" fontSize="10" fontWeight="bold">HIGH RIDGE (y = 12m)</text>
-                <text x="20" y="105" fill="#78350f" fontSize="10" fontWeight="bold">BASALT WALLS</text>
+          {/* 3. INTELLIGENCE (Compact Info Cards) */}
+          <section className="briefing-section intel-section">
+            <h3 className="section-label">
+              <Shield size={14} />
+              <span>INTELLIGENCE</span>
+            </h3>
+            <div className="intel-cards-grid">
+              <div className="intel-card">
+                <div className="intel-card-header">
+                  <Target size={14} className="intel-icon target-icon" />
+                  <span className="intel-title">TARGET</span>
+                </div>
+                <div className="intel-value">Mughal Vanguard</div>
+              </div>
 
-                {/* Red March Vectors showing 20,000-man imperial column */}
-                <path d="M30,70 L550,70" fill="none" stroke="#dc2626" strokeWidth="3" strokeDasharray="8 6" />
-                <polygon points="545,64 560,70 545,76" fill="#dc2626" />
-                <text x="240" y="62" fill="#b91c1c" fontSize="11" fontWeight="bold" letterSpacing="1">VANGUARD MARCH VECTOR (20,000 TROOPS)</text>
-              </svg>
+              <div className="intel-card">
+                <div className="intel-card-header">
+                  <Mountain size={14} className="intel-icon terrain-icon" />
+                  <span className="intel-title">TERRAIN</span>
+                </div>
+                <div className="intel-value">Narrow mountain pass</div>
+              </div>
 
-              {/* Choke-point Target Marker */}
-              <div className="chokepoint-marker">
-                <Compass size={14} className="compass-icon" />
-                <span>ROCKSLIDE CHOKE-POINT</span>
+              <div className="intel-card">
+                <div className="intel-card-header">
+                  <Crosshair size={14} className="intel-icon tactic-icon" />
+                  <span className="intel-title">TACTIC</span>
+                </div>
+                <div className="intel-value">Use elevation and falling boulders</div>
               </div>
             </div>
+          </section>
 
-            <div className="topo-caption">
-              <span>TOPOGRAPHIC SURVEY:</span> 20,000 imperial troops under Kartalab Khan are entering the 8-pace defile choke-point.
+          {/* 4. TACTICAL OBJECTIVE (Most Visually Prominent Instruction) */}
+          <section className="briefing-section objective-section">
+            <h3 className="section-label objective-label">
+              <Target size={15} />
+              <span>TACTICAL OBJECTIVE</span>
+            </h3>
+            <div className="objective-hero-box">
+              <div className="objective-headline">USE THE TERRAIN.</div>
+              <div className="objective-subline">
+                TRIGGER THE ROCKSLIDE WHEN THE VANGUARD ENTERS THE CHOKE POINT.
+              </div>
             </div>
+          </section>
+
+          {/* 5. GAMEPLAY FLOW (Simple Horizontal Sequence) */}
+          <section className="briefing-section flow-section">
+            <h3 className="section-label">
+              <span>GAMEPLAY FLOW</span>
+            </h3>
+            <div className="flow-sequence">
+              <div className="flow-step">
+                <span className="step-num">01</span>
+                <span className="step-text">DEPLOY SCOUT</span>
+              </div>
+              <span className="flow-arrow">➔</span>
+
+              <div className="flow-step">
+                <span className="step-num">02</span>
+                <span className="step-text">COLLECT BOULDER</span>
+              </div>
+              <span className="flow-arrow">➔</span>
+
+              <div className="flow-step">
+                <span className="step-num">03</span>
+                <span className="step-text">RETURN TO THROW POINT</span>
+              </div>
+              <span className="flow-arrow">➔</span>
+
+              <div className="flow-step">
+                <span className="step-num">04</span>
+                <span className="step-text">WAIT FOR VANGUARD</span>
+              </div>
+              <span className="flow-arrow">➔</span>
+
+              <div className="flow-step highlight-step">
+                <span className="step-num">05</span>
+                <span className="step-text">TRIGGER AMBUSH</span>
+              </div>
+            </div>
+          </section>
+
+          {/* 6. BOTTOM ACTION (Primary CTA) */}
+          <div className="dispatch-footer">
+            <button
+              className="dispatch-launch-btn"
+              onClick={() => setIsBriefingOpen(false)}
+            >
+              <span>DEPLOY SCOUT</span>
+              <ArrowRight size={18} />
+            </button>
+            <span className="key-shortcut-hint">ENTER / NEXT</span>
           </div>
-
-          {/* PANEL 2: Split Tactical Directives (Middle) */}
-          <div className="split-directives-row">
-            {/* Left Slice: The Intel Dispatch (Modi Script style Harkara letter) */}
-            <div className="directive-slice slice-intel">
-              <div className="slice-header">
-                <Scroll size={14} />
-                <span>HARKARA INTEL DISPATCH</span>
-              </div>
-              <p className="modi-text">
-                “Bahirji reports: The Mughal vanguard is flanked by sheer basalt walls. Narrow defile width: 8 paces. Heavy artillery cannot turn. <strong>Perfect point for Ganimi Kava.</strong>”
-              </p>
-            </div>
-
-            {/* Right Slice: Tactical Doctrine (High contrast dark ink panel) */}
-            <div className="directive-slice slice-doctrine">
-              <div className="slice-header doctrine-header">
-                <Shield size={14} />
-                <span>TACTICAL DOCTRINE</span>
-              </div>
-              <div className="doctrine-body">
-                <h4>NO DIRECT MELEE</h4>
-                <p>
-                  Trigger the boulder chute <kbd>[E]</kbd> from high ground. <strong>Use gravity, not steel.</strong>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Cinematic Launch Button (Bottom) */}
-          <button
-            className="dispatch-launch-btn"
-            onClick={() => setIsBriefingOpen(false)}
-          >
-            <span>DEPLOY SCOUT TO RIDGE [ ENTER ] ➔</span>
-          </button>
         </div>
       </div>
     </div>

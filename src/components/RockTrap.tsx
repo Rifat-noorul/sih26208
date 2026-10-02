@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF, Html } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useGameStore } from '../store/gameStore';
 
@@ -290,18 +290,6 @@ export const RockTrap: React.FC = () => {
     };
   }, [clearTimers]);
 
-  const introPhase = useGameStore((state) => state.introPhase);
-  const carryingStone = useGameStore((state) => state.carryingStone);
-  const isCarryingStoneStore = useGameStore((state) => state.isCarryingStone);
-  const isCarryingStone = Boolean(isCarryingStoneStore || carryingStone);
-  const isChuteArmedStore = useGameStore((state) => state.isChuteArmed);
-  const playerPos = useGameStore((state) => state.playerPosition);
-  
-  const distToThrowZone = playerPos.distanceTo(new THREE.Vector3(0, 9.1, 1.2));
-  const isChuteArmed = Boolean(isChuteArmedStore || (isCarryingStone && distToThrowZone <= 2.8));
-
-  const showBadges = introPhase === 'DONE' && (gameState === 'PLAYING' || gameState === 'READY' || gameState === 'ROLLING');
-
   return (
     <>
       <group ref={rockGroupRef} position={INITIAL_ROCK_POS} visible={showTrapRock}>
@@ -312,18 +300,6 @@ export const RockTrap: React.FC = () => {
           receiveShadow
         />
       </group>
-
-      {showBadges && gameState === 'PLAYING' && !isChuteArmed && !isCarryingStone && (
-        <Html position={[-7.5, 11.5, 2.5]} center>
-          <div style={{ background: '#f59e0b', color: '#000', fontWeight: 900, padding: '4px 10px', borderRadius: 4, border: '2px solid #000' }}>🔻 1. GET BOULDER</div>
-        </Html>
-      )}
-
-      {showBadges && gameState === 'PLAYING' && isCarryingStone && (
-        <Html position={[0, 11.5, 2.5]} center>
-          <div style={{ background: '#22c55e', color: '#000', fontWeight: 900, padding: '4px 10px', borderRadius: 4, border: '2px solid #000' }}>🔻 2. ARMED HERE</div>
-        </Html>
-      )}
     </>
   );
 };

@@ -1,6 +1,6 @@
 import { useRef, useMemo, Suspense, Component, type ReactNode } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, useGLTF, Sky, Cloud } from '@react-three/drei';
+import { OrbitControls, useGLTF, Sky, Cloud, Html } from '@react-three/drei';
 import { Physics, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import Player from './Player';
@@ -150,6 +150,14 @@ function BackFortWall() {
   );
 }
 
+export function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    window.innerWidth <= 768
+  );
+}
+
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
@@ -166,7 +174,29 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
   render() {
     if (this.state.hasError) {
-      return null;
+      return (
+        <Html center>
+          <div
+            style={{
+              background: 'rgba(17, 20, 23, 0.95)',
+              border: '2px solid #b91c1c',
+              color: '#ffffff',
+              padding: '20px 24px',
+              borderRadius: '8px',
+              textAlign: 'center',
+              maxWidth: '320px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
+            }}
+          >
+            <h3 style={{ color: '#ef4444', margin: '0 0 8px 0', fontSize: '16px', fontWeight: 900 }}>
+              3D GAMEPLAY COULD NOT START
+            </h3>
+            <p style={{ color: '#e7e5e4', fontSize: '12px', margin: 0, lineHeight: 1.4 }}>
+              Your device or browser may not support the required WebGL features.
+            </p>
+          </div>
+        </Html>
+      );
     }
     return this.props.children;
   }
@@ -573,21 +603,24 @@ export interface GameCanvasProps {
  */
 export default function GameCanvas({ showWireframe = false, onStanceChange }: GameCanvasProps) {
   const controlsRef = useRef<any>(null);
+  const isMobile = useMemo(() => isMobileDevice(), []);
 
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
       <Canvas
-        shadows
+        shadows={!isMobile}
+        dpr={isMobile ? [1, 1.25] : [1, 2]}
         camera={{
           position: [0, 17, 27],
-          fov: 45,
+          fov: isMobile ? 52 : 45,
           near: 0.1,
-          far: 1000,
+          far: 800,
         }}
         gl={{
-          antialias: true,
+          antialias: !isMobile,
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 1.15,
+          powerPreference: 'high-performance',
         }}
       >
         {/* Atmospheric 3D Sky & Mountain Depth Fog */}
@@ -628,9 +661,9 @@ export default function GameCanvas({ showWireframe = false, onStanceChange }: Ga
         <directionalLight
           position={[15, 25, 15]}
           intensity={1.2}
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
+          castShadow={!isMobile}
+          shadow-mapSize-width={isMobile ? 512 : 2048}
+          shadow-mapSize-height={isMobile ? 512 : 2048}
           shadow-camera-left={-30}
           shadow-camera-right={30}
           shadow-camera-top={30}

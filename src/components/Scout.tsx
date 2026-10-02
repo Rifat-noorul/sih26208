@@ -225,11 +225,24 @@ export default function Scout({ onStanceChange, controlsRef }: ScoutProps) {
     };
   }, [isBriefingOpen, onStanceChange, setIsPlayerCrouched]);
 
+  // Ensure rockInstance meshes cast and receive shadows
+  useEffect(() => {
+    if (rockInstance) {
+      rockInstance.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+    }
+  }, [rockInstance]);
+
   useFrame((state, delta) => {
     if (!meshRef.current) return;
 
     if (rockAttachRef.current && isCarryingStone) {
-      rockAttachRef.current.position.y = 2.5 + Math.sin(state.clock.elapsedTime * 6) * 0.05;
+      const baseHeadY = isCrouchedRef.current ? 1.4 : 1.95;
+      rockAttachRef.current.position.y = baseHeadY + Math.sin(state.clock.elapsedTime * 6) * 0.04;
     }
 
     if (!isBriefingOpen) {
@@ -332,18 +345,19 @@ export default function Scout({ onStanceChange, controlsRef }: ScoutProps) {
       {/* Scout 3D GLTF Model */}
       <group ref={scoutGroupRef} scale={[baseScale, baseScale, baseScale]}>
         <primitive object={scoutScene} />
-
-        {/* 3D Overhead Rock Model lifted by Scout when isCarryingStone is true */}
-        {isCarryingStone && (
-          <group ref={rockAttachRef} position={[0, 2.5, 0.2]}>
-            <primitive
-              object={rockInstance}
-              scale={[0.75, 0.75, 0.75]}
-              castShadow
-            />
-          </group>
-        )}
       </group>
+
+      {/* 3D Overhead Rock Model visibly carried on top of Scout's head when isCarryingStone is true */}
+      {isCarryingStone && (
+        <group ref={rockAttachRef} position={[0, 1.95, 0]}>
+          <primitive
+            object={rockInstance}
+            scale={[0.18, 0.18, 0.18]}
+            castShadow
+            receiveShadow
+          />
+        </group>
+      )}
 
       {/* Ground Ring Indicator Under Scout's Feet */}
       <group position={[0, 0.02, 0]}>

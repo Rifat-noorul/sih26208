@@ -1,88 +1,55 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import * as THREE from 'three';
 import { useGameStore } from '../store/gameStore';
-import { translations } from '../utils/i18n';
 import { Zap, Eye, EyeOff } from 'lucide-react';
 
-/**
- * Mobile Virtual Joystick & Touch Action Controls Overlay
- * Renders on touch devices or mobile landscape views
- */
-export default function MobileControls() {
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
+interface MobileControlsProps {
+  isMobileLayout?: boolean;
+}
+
+export const MobileControls: React.FC<MobileControlsProps> = ({ isMobileLayout = false }) => {
   const joystickRef = useRef<HTMLDivElement>(null);
   const [knobPos, setKnobPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const touchIdRef = useRef<number | null>(null);
+  const activePointerIdRef = useRef<number | null>(null);
 
   const carryingStone = useGameStore((state) => state.carryingStone);
+  const isCarryingStoneStore = useGameStore((state) => state.isCarryingStone);
+  const isCarrying = Boolean(isCarryingStoneStore || carryingStone);
   const playerPosition = useGameStore((state) => state.playerPosition);
   const isPlayerCrouched = useGameStore((state) => state.isPlayerCrouched);
   const setIsPlayerCrouched = useGameStore((state) => state.setIsPlayerCrouched);
-  const language = useGameStore((state) => state.language);
-  const t = translations[language] || translations.en;
+  const gameState = useGameStore((state) => state.gameState);
 
-  // Distance to throw point [0, 9.1, 1.2]
-  const distToThrow = playerPosition.distanceTo(new THREE_Vector3_Dummy(0, 9.1, 1.2));
-  const isAtThrowPoint = distToThrow <= 2.8;
+  const stoneSupplyPos = useRef(new THREE.Vector3(-6.0, 9.1, 1.2)).current;
+  const distToSupply = playerPosition ? playerPosition.distanceTo(stoneSupplyPos) : 99;
+  const isNearSupply = distToSupply <= 2.5;
 
-  // Detect touch support or screen size
-  useEffect(() => {
-    const checkTouch = () => {
-      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth <= 900;
-      setIsTouchDevice(hasTouch);
-    };
-    checkTouch();
-    window.addEventListener('resize', checkTouch);
-    return () => window.removeEventListener('resize', checkTouch);
-  }, []);
+  // Active key state tracking
+  const activeKeysRef = useRef<{ w: boolean; a: boolean; s: boolean; d: boolean }>({
+    w: false,
+    a: false,
+    s: false,
+    d: false,
+  });
 
-  // Dispatch Keyboard Events to existing WASD movement system
-  const dispatchKey = (code: string, pressed: boolean) => {
+  const dispatchKey = useCallback((code: string, pressed: boolean) => {
     const event = new KeyboardEvent(pressed ? 'keydown' : 'keyup', {
       code,
       bubbles: true,
       cancelable: true,
     });
     window.dispatchEvent(event);
-  };
+  }, []);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!joystickRef.current) return;
-    const touch = e.changedTouches[0];
-    touchIdRef.current = touch.identifier;
-    setIsDragging(true);
-    updateJoystick(touch.clientX, touch.clientY);
-  };
+  const releaseAllKeys = useCallback(() => {
+    if (activeKeysRef.current.w) { activeKeysRef.current.w = false; dispatchKey('KeyW', false); }
+    if (activeKeysRef.current.a) { activeKeysRef.current.a = false; dispatchKey('KeyA', false); }
+    if (activeKeysRef.current.s) { activeKeysRef.current.s = false; dispatchKey('KeyS', false); }
+    if (activeKeysRef.current.d) { activeKeysRef.current.d = false; dispatchKey('KeyD', false); }
+  }, [dispatchKey]);
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const touch = e.changedTouches[i];
-      if (touch.identifier === touchIdRef.current) {
-        updateJoystick(touch.clientX, touch.clientY);
-        break;
-      }
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const touch = e.changedTouches[i];
-      if (touch.identifier === touchIdRef.current) {
-        setIsDragging(false);
-        setKnobPos({ x: 0, y: 0 });
-        touchIdRef.current = null;
-        // Release all WASD keys
-        dispatchKey('KeyW', false);
-        dispatchKey('KeyS', false);
-        dispatchKey('KeyA', false);
-        dispatchKey('KeyD', false);
-        break;
-      }
-    }
-  };
-
-  const updateJoystick = (clientX: number, clientY: number) => {
+  const updateJoystickFromPointer = useCallback((clientX: number, clientY: number) => {
     if (!joystickRef.current) return;
     const rect = joystickRef.current.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -91,7 +58,7 @@ export default function MobileControls() {
     const dx = clientX - centerX;
     const dy = clientY - centerY;
     const distance = Math.hypot(dx, dy);
-    const maxRadius = rect.width / 2 - 10;
+    const maxRadius = rect.width / 2 - 12;
 
     let clampedX = dx;
     let clampedY = dy;
@@ -102,83 +69,117 @@ export default function MobileControls() {
 
     setKnobPos({ x: clampedX, y: clampedY });
 
-    // Normalize input between -1 and 1
     const normX = clampedX / maxRadius;
     const normY = clampedY / maxRadius;
-    const threshold = 0.25;
+    const threshold = 0.22;
 
-    dispatchKey('KeyW', normY < -threshold);
-    dispatchKey('KeyS', normY > threshold);
-    dispatchKey('KeyA', normX < -threshold);
-    dispatchKey('KeyD', normX > threshold);
+    const nextW = normY < -threshold;
+    const nextS = normY > threshold;
+    const nextA = normX < -threshold;
+    const nextD = normX > threshold;
+
+    if (activeKeysRef.current.w !== nextW) { activeKeysRef.current.w = nextW; dispatchKey('KeyW', nextW); }
+    if (activeKeysRef.current.s !== nextS) { activeKeysRef.current.s = nextS; dispatchKey('KeyS', nextS); }
+    if (activeKeysRef.current.a !== nextA) { activeKeysRef.current.a = nextA; dispatchKey('KeyA', nextA); }
+    if (activeKeysRef.current.d !== nextD) { activeKeysRef.current.d = nextD; dispatchKey('KeyD', nextD); }
+  }, [dispatchKey]);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    activePointerIdRef.current = e.pointerId;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    setIsDragging(true);
+    updateJoystickFromPointer(e.clientX, e.clientY);
   };
 
-  const handleActionClick = () => {
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging || activePointerIdRef.current !== e.pointerId) return;
+    e.preventDefault();
+    updateJoystickFromPointer(e.clientX, e.clientY);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (activePointerIdRef.current === e.pointerId) {
+      setIsDragging(false);
+      setKnobPos({ x: 0, y: 0 });
+      activePointerIdRef.current = null;
+      releaseAllKeys();
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      releaseAllKeys();
+    };
+  }, [releaseAllKeys]);
+
+  const handleActionClick = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     window.dispatchEvent(new CustomEvent('trigger-rock-release'));
   };
 
-  const toggleCrouch = () => {
+  const toggleCrouch = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setIsPlayerCrouched(!isPlayerCrouched);
   };
 
-  if (!isTouchDevice) return null;
+  if (!isMobileLayout && gameState !== 'PLAYING') return null;
 
   return (
-    <div className="mobile-controls-layer">
-      {/* LEFT: Virtual Movement Joystick */}
+    <div className="mobile-controls-overlay" style={{ touchAction: 'none' }}>
+      {/* BOTTOM-LEFT: Virtual Movement Joystick */}
       <div
-        className="joystick-base"
+        className={`virtual-joystick-base ${isDragging ? 'dragging' : ''}`}
         ref={joystickRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={{ touchAction: 'none' }}
       >
         <div
-          className="joystick-knob"
+          className="virtual-joystick-knob"
           style={{
             transform: `translate(${knobPos.x}px, ${knobPos.y}px)`,
           }}
         />
-        <div className="joystick-label">WASD</div>
+        <div className="joystick-center-dot" />
+        <span className="joystick-sub-label">MOVE</span>
       </div>
 
-      {/* RIGHT: Action Buttons */}
-      <div className="mobile-action-group">
-        {/* Crouch Button */}
-        <button className={`mobile-btn mobile-btn-crouch ${isPlayerCrouched ? 'active' : ''}`} onClick={toggleCrouch}>
-          {isPlayerCrouched ? <EyeOff size={20} /> : <Eye size={20} />}
-          <span>C</span>
+      {/* BOTTOM-RIGHT: Mobile Tactical Action Controls */}
+      <div className="mobile-action-group" style={{ touchAction: 'none' }}>
+        {/* Crouch Stance Toggle Button */}
+        <button
+          className={`mobile-crouch-btn ${isPlayerCrouched ? 'crouched' : ''}`}
+          onClick={toggleCrouch}
+          onTouchEnd={toggleCrouch}
+          title="Toggle Crouch Stance"
+        >
+          {isPlayerCrouched ? <EyeOff size={18} /> : <Eye size={18} />}
+          <span>CROUCH</span>
         </button>
 
-        {/* Large Action E Button */}
+        {/* Primary Tactical Action Button (E) */}
         <button
-          className={`mobile-btn mobile-btn-e ${carryingStone && isAtThrowPoint ? 'btn-ready' : ''}`}
+          className={`mobile-action-btn ${isCarrying ? 'carrying' : isNearSupply ? 'near-supply' : ''}`}
           onClick={handleActionClick}
+          onTouchEnd={handleActionClick}
+          title="Tactical Action"
         >
-          <Zap size={24} />
-          <span className="btn-main-text">E</span>
-          <span className="btn-sub-text">
-            {carryingStone
-              ? isAtThrowPoint
-                ? t.pressE
-                : t.returnToThrow
-              : t.getStone}
+          <div className="btn-glow-ring" />
+          <Zap size={22} className="btn-zap-icon" />
+          <span className="btn-letter">E</span>
+          <span className="btn-caption">
+            {isCarrying ? 'THROW' : isNearSupply ? 'COLLECT' : 'ACTION'}
           </span>
         </button>
       </div>
     </div>
   );
-}
+};
 
-// Helper Vector3 dummy for distance check inside standalone file
-class THREE_Vector3_Dummy {
-  x: number;
-  y: number;
-  z: number;
-  constructor(x: number, y: number, z: number) {
-    this.x = x;
-    this.y = y;
-    this.z = z;
-  }
-}
+export default MobileControls;

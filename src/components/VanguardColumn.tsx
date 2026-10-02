@@ -173,12 +173,14 @@ export default function VanguardColumn() {
     return zoneBox.intersectsBox(formationBox);
   };
 
+  const labelGroupRef = useRef<THREE.Group>(null);
+
   /*
   |--------------------------------------------------------------------------
-  | CONTINUOUS MARCHING
+  | CONTINUOUS MARCHING & DYNAMIC TARGET LABEL ANCHORING
   |--------------------------------------------------------------------------
   */
-  useFrame((_, delta) => {
+  useFrame(({ camera }, delta) => {
     const formation = formationRef.current;
     if (!formation) return;
 
@@ -186,23 +188,15 @@ export default function VanguardColumn() {
      * Stop after successful hit.
      */
     if (
-      gameState === 'HIT' ||
-      gameState === 'VICTORY' ||
-      Boolean((window as any).__vanguardHit)
+      gameState !== 'HIT' &&
+      gameState !== 'VICTORY' &&
+      !Boolean((window as any).__vanguardHit)
     ) {
-      return;
-    }
+      formation.position.x -= delta * 3.2;
 
-    /*
-     * March toward -X.
-     */
-    formation.position.x -= delta * 3.2;
-
-    /*
-     * Loop back.
-     */
-    if (formation.position.x < -30) {
-      formation.position.x = 28;
+      if (formation.position.x < -30) {
+        formation.position.x = 28;
+      }
     }
 
     /*
@@ -210,6 +204,23 @@ export default function VanguardColumn() {
      */
     const inside = checkStrikeZone();
     (window as any).__vanguardInStrikeZone = inside;
+
+    /*
+     * Dynamically anchor target label to formation center + camera up vector
+     */
+    if (labelGroupRef.current && !isHit) {
+      formation.updateWorldMatrix(true, true);
+      const box = new THREE.Box3().setFromObject(formation);
+      const centerX = (box.min.x + box.max.x) / 2;
+      const maxY = box.max.y;
+      const centerZ = (box.min.z + box.max.z) / 2;
+
+      const cameraUp = new THREE.Vector3();
+      cameraUp.setFromMatrixColumn(camera.matrixWorld, 1).normalize();
+
+      const labelPos = new THREE.Vector3(centerX, maxY, centerZ).addScaledVector(cameraUp, 1.2);
+      labelGroupRef.current.position.copy(labelPos);
+    }
   });
 
   /*
@@ -223,12 +234,54 @@ export default function VanguardColumn() {
     Boolean((window as any).__vanguardHit);
 
   return (
-    <group ref={formationRef} position={[14, 3, 6.8]}>
-      {gameState === 'PLAYING' && !isHit && (
-        <Html position={[3.5, 4.0, 0]} center>
-          <div style={{ background: '#dc2626', color: '#fff', fontWeight: 900, fontSize: '11px', padding: '3px 8px', borderRadius: 3, border: '1px solid #fff', whiteSpace: 'nowrap' }}>🎯 MUGHAL VANGUARD (TARGET)</div>
-        </Html>
+    <>
+      {/* Dynamic World-Anchored Mughal Vanguard Target Label */}
+      {!isHit && (
+        <group ref={labelGroupRef} position={[17.3, 5.4, 6.8]}>
+          <Html center zIndexRange={[100, 0]} distanceFactor={22}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                pointerEvents: 'none',
+                userSelect: 'none',
+              }}
+            >
+              <div
+                style={{
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  fontWeight: 900,
+                  fontSize: '11px',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  border: '1.5px solid #ffffff',
+                  boxShadow: '0 3px 12px rgba(0, 0, 0, 0.65)',
+                  whiteSpace: 'nowrap',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                🎯 MUGHAL VANGUARD (TARGET)
+              </div>
+              <div
+                style={{
+                  color: '#dc2626',
+                  fontSize: '14px',
+                  fontWeight: 900,
+                  lineHeight: '1',
+                  marginTop: '-2px',
+                  textShadow: '0 1px 3px rgba(0, 0, 0, 0.8), 0 0 2px #fff',
+                }}
+              >
+                ▼
+              </div>
+            </div>
+          </Html>
+        </group>
       )}
+
+      <group ref={formationRef} position={[14, 3, 6.8]}>
       {TROOP_OFFSETS.map((offset, index) => {
         const scatter = scatterOffsets[index];
 
@@ -249,7 +302,8 @@ export default function VanguardColumn() {
           </group>
         );
       })}
-    </group>
+      </group>
+    </>
   );
 }
 
