@@ -1,6 +1,3 @@
-*.glb filter=lfs diff=lfs merge=lfs -text
-*.gltf filter=lfs diff=lfs merge=lfs -text
-*.fbx filter=lfs diff=lfs merge=lfs -text
-*.mp4 filter=lfs diff=lfs merge=lfs -text
-*.mov filter=lfs diff=lfs merge=lfs -text
-public/models/*.glb filter=lfs diff=lfs merge=lfs -text
+# Git configuration for binary files
+*.mp4 text=auto
+*.mov text=auto

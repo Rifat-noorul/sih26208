@@ -150,12 +150,22 @@ function BackFortWall() {
   );
 }
 
+export function isWebGLSupported(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(
+      window.WebGLRenderingContext &&
+      (canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+    );
+  } catch (e) {
+    return false;
+  }
+}
+
 export function isMobileDevice(): boolean {
   if (typeof window === 'undefined') return false;
-  return (
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    window.innerWidth <= 768
-  );
+  return window.innerWidth <= 768 || ('ontouchstart' in window && window.innerWidth <= 1024);
 }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -169,11 +179,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: any, errorInfo: any) {
-    console.error('3D Scene Error:', error, errorInfo);
+    console.error('GANIMI KAVA 3D INITIALIZATION ERROR:', error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
+      const webglAvailable = isWebGLSupported();
       return (
         <Html center>
           <div
@@ -184,16 +195,33 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               padding: '20px 24px',
               borderRadius: '8px',
               textAlign: 'center',
-              maxWidth: '320px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
+              maxWidth: '340px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.85)',
             }}
           >
-            <h3 style={{ color: '#ef4444', margin: '0 0 8px 0', fontSize: '16px', fontWeight: 900 }}>
-              3D GAMEPLAY COULD NOT START
+            <h3 style={{ color: '#ef4444', margin: '0 0 8px 0', fontSize: '15px', fontWeight: 900 }}>
+              {webglAvailable ? '3D SCENE LOADING FAILURE' : 'WEBGL UNSUPPORTED'}
             </h3>
-            <p style={{ color: '#e7e5e4', fontSize: '12px', margin: 0, lineHeight: 1.4 }}>
-              Your device or browser may not support the required WebGL features.
+            <p style={{ color: '#e7e5e4', fontSize: '12px', margin: '0 0 12px 0', lineHeight: 1.4 }}>
+              {webglAvailable
+                ? 'An asset or rendering error occurred. Retrying will reload the 3D battlefield.'
+                : 'Your browser or device does not support WebGL rendering.'}
             </p>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                background: '#b91c1c',
+                color: '#ffffff',
+                border: '1px solid #f59e0b',
+                padding: '6px 14px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: 900,
+                cursor: 'pointer',
+              }}
+            >
+              RETRY BATTLEFIELD
+            </button>
           </div>
         </Html>
       );
